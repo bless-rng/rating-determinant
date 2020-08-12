@@ -2,8 +2,6 @@
 
 namespace BlessRng;
 
-use PHPUnit\Exception;
-
 class RatingDeterminant
 {
     public static function getRankedTeamsFromEndPoint($endPoint) {
@@ -44,7 +42,7 @@ class RatingDeterminant
         try {
             $rawData = json_decode($data);
             if (!$rawData) return null;
-            $teams = [];
+            $teams = array();
             foreach ($rawData as $object) {
                 if (!isset($object)) continue;
                 $team = new Team();
@@ -53,7 +51,7 @@ class RatingDeterminant
                 $teams[] = $team;
             }
             return $teams;
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             return null;
         }
     }
