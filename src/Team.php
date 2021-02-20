@@ -1,14 +1,14 @@
 <?php
 
-
 namespace BlessRng;
 
+use JsonSerializable;
 
-class Team implements \JsonSerializable
+class Team implements JsonSerializable
 {
-    private $rank;
-    private $team;
-    private $scores;
+    private string $rank;
+    private string $team;
+    private int $scores;
 
     public function getTeam(): string {
         return $this->team;

@@ -2,46 +2,70 @@
 
 namespace BlessRng;
 
+use Exception;
+
 class RatingDeterminant
 {
-    public static function getRankedTeamsFromEndPoint($endPoint) {
-        if (filter_var($endPoint, FILTER_VALIDATE_URL) === false) {
-            throw new \Exception("Bad endpoint");
-        }
-        $jsonData = static::getEndpointData($endPoint);
-        if (!$jsonData) {
-            throw new \Exception("Json data not found");
-        }
-        return static::getRankedTeamsFromJsonData($jsonData);
+    private CurlClient $curlClient;
+
+    public function __construct(CurlClient $client)
+    {
+        $this->curlClient = $client;
     }
 
-    public static function getRankedTeamsFromJsonData($jsonTeamsData) {
-        $teams = static::convertJsonToTeamsData($jsonTeamsData);
-        if (!$teams) {
-            throw new \Exception("Json data can not be converted to expected object type");
+    /**
+     * @param string $endPoint
+     * @return string
+     * @throws Exception
+     */
+    public function getRankedTeamsFromEndPoint(string $endPoint): string {
+        if (filter_var($endPoint, FILTER_VALIDATE_URL) === false) {
+            throw new Exception("Bad endpoint");
+        }
+        $jsonData = $this->getEndpointData($endPoint);
+        return $this->getRankedTeamsFromJsonData($jsonData);
+    }
+
+    /**
+     * @param string $jsonTeamsData
+     * @return string
+     * @throws Exception
+     */
+    private function getRankedTeamsFromJsonData(string $jsonTeamsData): string {
+        $teams = $this->convertJsonToTeamsData($jsonTeamsData);
+        if (null === $teams) {
+            throw new Exception("Json data can not be converted to expected object type");
         }
         usort($teams, function ($teamA, $teamB) {
             return $teamB->getScores() - $teamA->getScores();
         });
-        return json_encode(static::getRankedTeams($teams));
+        $teams = $this->getRankedTeams($teams);
+        return json_encode($teams);
     }
 
-    private static function getEndpointData($endpoint)
+    /**
+     * @param string $endpoint
+     * @return string
+     * @throws Exception
+     */
+    private function getEndpointData(string $endpoint): string
     {
-        $curl = curl_init();
-        curl_setopt($curl, CURLOPT_HEADER,"Content-type: application/json");
-        curl_setopt($curl, CURLOPT_URL, $endpoint);
-        curl_setopt($curl, CURLOPT_RETURNTRANSFER, 1);
-        $result = curl_exec($curl);
-
-        curl_close($curl);
+        $result = $this->curlClient->getFromEndPoint($endpoint);
+        if ($result === false) {
+            throw new Exception("No curl response data");
+        }
         return $result;
     }
 
-    private static function convertJsonToTeamsData($data) {
+    /**
+     * @param string $jsonData
+     * @return ?array
+     */
+    private function convertJsonToTeamsData(string $jsonData): ?array
+    {
         try {
-            $rawData = json_decode($data);
-            if (!$rawData) return null;
+            $rawData = json_decode($jsonData);
+            if (null === $rawData) return null;
             $teams = array();
             foreach ($rawData as $object) {
                 if (!isset($object)) continue;
@@ -56,7 +80,7 @@ class RatingDeterminant
         }
     }
 
-    private static function getRankedTeams($teams) {
+    private function getRankedTeams($teams) {
         $rank = 1;
         $lastTeam = null;
         foreach ($teams as $team) {
